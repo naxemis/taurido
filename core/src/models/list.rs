@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::errors::card_error::CardError;
 use crate::errors::card_move_error::CardMoveError;
 use crate::errors::column_error::ColumnError;
@@ -6,6 +8,7 @@ use crate::models::card::Card;
 use crate::models::column::Column;
 
 /// A to-do list identified by a numeric ID and a name.
+#[derive(Serialize, Deserialize)]
 pub struct List {
     id: u16,
     name: String,
@@ -14,7 +17,7 @@ pub struct List {
 
 impl List {
     /// Creates a list with the given ID and name.
-    pub fn new(id: u16, name: String) -> Self {
+    pub(crate) fn new(id: u16, name: String) -> Self {
         Self {
             id,
             name,
