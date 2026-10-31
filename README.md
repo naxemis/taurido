@@ -2,7 +2,7 @@
 Simple terminal to-do app built with Ratatui. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON and synchronize with git using commands.
 
 ## Project Status
-Project is under development. Old repository was lost, rebuilding `core/` with old code.
+Project is under development. Code from old repository has been rebuilded.
 
 ## Features
 ### Minimal Viable Product:
