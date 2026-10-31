@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::errors::card_error::CardError;
 use crate::errors::card_move_error::CardMoveError;
 use crate::models::card::Card;
 
+#[derive(Serialize, Deserialize)]
 pub(crate) struct CardManager {
     cards: HashMap<u16, Card>,
     next_id: u32,
