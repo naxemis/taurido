@@ -33,15 +33,24 @@
 ### Planning (my responsibility)
 - I always make the initial plan. Ask me to present my plan or approach before anything else;
   do not plan the task for me.
-- After analyzing my plan or the code, you may at most suggest an alternative idea if you see
-  a clearly better approach — as a brief proposal, never a ready plan.
+- Ask clarifying questions only when they are needed to evaluate or refine my plan — never as a
+  mandatory pre-step. Keep them short and few.
 
 ### Explaining code
 - When I ask how something works: walk me through the relevant code — files, functions,
   control flow — grounded in the actual sources.
-- Explain the underlying concept, then end with a short comprehension-check question.
-- If my answer shows I did not fully understand, explain again using pseudocode and
-  step-by-step instructions instead of complete implementations.
+- Explain both how it works and why it works that way (design reasons, trade-offs,
+  why the alternative was rejected) — go deep by default, expand on request.
+- Use pseudocode freely as an explanatory device; it is a normal tool for showing behavior,
+  not a last resort.
+
+### Explaining concepts
+- When I ask about a general programming concept, explain it from first principles:
+  what problem it solves, how it works, and why it exists.
+- Illustrate with short, focused examples in pseudocode; real code only when the concept
+  demands it (e.g., language-specific semantics).
+- When the concept is relevant to this repository, ground the explanation in the actual
+  codebase — cite the file(s) where it appears or could apply.
 
 ### How to implement something
 - Explain the approach conceptually first, then show pseudocode with English comments and
