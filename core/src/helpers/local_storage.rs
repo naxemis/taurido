@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 pub struct LocalStorage {
     app_directory: PathBuf,
-    lists_directory: PathBuf,
+    lists_path: PathBuf,
 }
 
 impl LocalStorage {
@@ -12,13 +12,13 @@ impl LocalStorage {
         let data_directory = data_dir().ok_or(StorageError::DataDirectoryNotFound)?;
 
         let app_directory = data_directory.join("tuido");
-        let lists_directory = app_directory.join("lists");
+        let lists_path = app_directory.join("lists.json");
 
-        Self::create_directory(&lists_directory)?;
+        Self::create_directory(&app_directory)?;
 
         Ok(Self {
             app_directory,
-            lists_directory,
+            lists_path,
         })
     }
 
