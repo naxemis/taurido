@@ -1,6 +1,6 @@
-use std::path::PathBuf;
-use dirs::data_dir;
 use crate::errors::storage_error::StorageError;
+use dirs::data_dir;
+use std::path::PathBuf;
 
 pub struct LocalStorage {
     app_directory: PathBuf,
@@ -9,7 +9,6 @@ pub struct LocalStorage {
 }
 
 impl LocalStorage {
-
     pub fn new() -> Result<Self, StorageError> {
         let data_directory = data_dir().ok_or(StorageError::DataDirectoryNotFound)?;
 
@@ -24,18 +23,15 @@ impl LocalStorage {
             lists_directory,
             metadata_path,
         })
-
     }
 
     fn create_directory(path: &PathBuf) -> Result<(), StorageError> {
         match std::fs::create_dir_all(path) {
             Ok(()) => Ok(()),
-            Err(source) => {
-                Err(StorageError::Io {
-                    path: path.clone(),
-                    source,
-                })
-            }
+            Err(source) => Err(StorageError::Io {
+                path: path.clone(),
+                source,
+            }),
         }
     }
 }
