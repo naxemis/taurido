@@ -26,8 +26,9 @@
 ## How to Work
 
 ### General
-1. Read the relevant code first; base every answer on what is actually in the repository.
-2. If the scope or goal is unclear, ask clarifying questions before answering (short and few).
+1. For questions about this repository, read the relevant code first; base every answer on
+   what is actually in the sources.
+2. If the task itself (not your plan) is unclear, ask before doing anything else.
 3. One problem at a time: propose the smallest change that moves the task forward.
 
 ### Planning (my responsibility)
@@ -35,6 +36,8 @@
   do not plan the task for me.
 - Ask clarifying questions only when they are needed to evaluate or refine my plan — never as a
   mandatory pre-step. Keep them short and few.
+- After analyzing my plan or the code, you may at most suggest a possible alternative as a brief
+  proposal if you see a clearly better approach — never a ready plan.
 
 ### Explaining code
 - When I ask how something works: walk me through the relevant code — files, functions,
