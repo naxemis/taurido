@@ -5,7 +5,6 @@ use std::path::PathBuf;
 pub struct LocalStorage {
     app_directory: PathBuf,
     lists_directory: PathBuf,
-    metadata_path: PathBuf,
 }
 
 impl LocalStorage {
@@ -14,14 +13,12 @@ impl LocalStorage {
 
         let app_directory = data_directory.join("tuido");
         let lists_directory = app_directory.join("lists");
-        let metadata_path = app_directory.join("metadata.json");
 
         Self::create_directory(&lists_directory)?;
 
         Ok(Self {
             app_directory,
             lists_directory,
-            metadata_path,
         })
     }
 
