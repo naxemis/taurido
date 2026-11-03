@@ -1,20 +1,21 @@
+use std::fs::File;
+use std::io::Write;
 use crate::errors::storage_error::StorageError;
 use dirs::data_dir;
 use std::path::PathBuf;
-use serde::Serialize;
 use crate::managers::list_manager::ListManager;
 
 pub struct LocalStorage {
     _app_directory: PathBuf,
-    lists_path: PathBuf,
+    _lists_path: PathBuf,
     temp_lists_path: PathBuf,
-    presave_lists_path: PathBuf,
+    _presave_lists_path: PathBuf,
 }
 
 // todo(storage): save_lists(&ListManager) -> Result<(), StorageError>
-//   1. Write the string to temp_lists.json and sync_all - file failure -> Err(Io)
-//   2. If lists.json exists, copy it to presave_lists.json - copy failure -> Err(Io)
-//   3. Rename temp_lists.json -> lists.json - rename failure -> Err(Io)
+//   2. Write the string to temp_lists.json and sync_all - file failure -> Err(Io)
+//   3. If lists.json exists, copy it to presave_lists.json - copy failure -> Err(Io)
+//   4. Rename temp_lists.json -> lists.json - rename failure -> Err(Io)
 
 // todo(storage): load_lists() -> Result<Option<ListManager>, StorageError>
 //   - Ok(None) when lists.json does not exist (first start)
@@ -39,9 +40,9 @@ impl LocalStorage {
 
         Ok(Self {
             _app_directory: app_directory,
-            lists_path,
+            _lists_path: lists_path,
             temp_lists_path,
-            presave_lists_path,
+            _presave_lists_path: presave_lists_path,
         })
     }
 
@@ -56,7 +57,11 @@ impl LocalStorage {
     }
 
     pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
-        let _data = serde_json::to_string(manager).map_err(|source| StorageError::Serialization { source })?;
+        let data = serde_json::to_string(manager).map_err(|source| StorageError::Serialization { source })?;
+
+        let mut temp_file = File::create(&self.temp_lists_path).map_err(| source | StorageError::Io { path: self.temp_lists_path.clone(), source })?;
+        temp_file.write_all(data.as_bytes()).map_err(|source| StorageError::Io { path: self.temp_lists_path.clone(), source })?;
+        temp_file.sync_all().map_err(|source| StorageError::Io { path: self.temp_lists_path.clone(), source })?;
 
         Ok(())
     }
