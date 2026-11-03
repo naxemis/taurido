@@ -3,7 +3,7 @@ use crate::managers::list_manager::ListManager;
 use dirs::data_dir;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct LocalStorage {
     _app_directory: PathBuf,
@@ -11,9 +11,6 @@ pub struct LocalStorage {
     temp_lists_path: PathBuf,
     presave_lists_path: PathBuf,
 }
-
-// todo(storage): save_lists(&ListManager) -> Result<(), StorageError>
-//   4. Rename temp_lists.json -> lists.json - rename failure -> Err(Io)
 
 // todo(storage): load_lists() -> Result<Option<ListManager>, StorageError>
 //   - Ok(None) when lists.json does not exist (first start)
@@ -44,11 +41,22 @@ impl LocalStorage {
         })
     }
 
-    fn create_directory(path: &PathBuf) -> Result<(), StorageError> {
+    fn create_directory(path: &Path) -> Result<(), StorageError> {
         match std::fs::create_dir_all(path) {
             Ok(()) => Ok(()),
             Err(source) => Err(StorageError::Io {
-                path: path.clone(),
+                path: path.to_path_buf(),
+                source,
+            }),
+        }
+    }
+
+    fn copy_if_exists(from: &Path, to: &Path) -> Result<(), StorageError> {
+        match std::fs::copy(from, to) {
+            Ok(_) => Ok(()),
+            Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(source) => Err(StorageError::Io {
+                path: to.to_path_buf(),
                 source,
             }),
         }
@@ -58,30 +66,32 @@ impl LocalStorage {
         let current_data = serde_json::to_string(manager)
             .map_err(|source| StorageError::Serialization { source })?;
 
-        let mut temp_lists =
-            File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
-                path: self.temp_lists_path.clone(),
-                source,
-            })?;
-        temp_lists
-            .write_all(current_data.as_bytes())
-            .map_err(|source| StorageError::Io {
-                path: self.temp_lists_path.clone(),
-                source,
-            })?;
-        temp_lists.sync_all().map_err(|source| StorageError::Io {
-            path: self.temp_lists_path.clone(),
-            source,
-        })?;
-
-        if self.lists_path.exists() {
-            std::fs::copy(&self.lists_path, &self.presave_lists_path).map_err(|source| {
-                StorageError::Io {
-                    path: self.presave_lists_path.clone(),
+        {
+            let mut temp_lists =
+                File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
+                    path: self.temp_lists_path.clone(),
                     source,
-                }
+                })?;
+            temp_lists
+                .write_all(current_data.as_bytes())
+                .map_err(|source| StorageError::Io {
+                    path: self.temp_lists_path.clone(),
+                    source,
+                })?;
+            temp_lists.sync_all().map_err(|source| StorageError::Io {
+                path: self.temp_lists_path.clone(),
+                source,
             })?;
         }
+
+        Self::copy_if_exists(&self.lists_path, &self.presave_lists_path)?;
+
+        std::fs::rename(&self.temp_lists_path, &self.lists_path).map_err(|source| {
+            StorageError::Io {
+                path: self.lists_path.clone(),
+                source,
+            }
+        })?;
 
         Ok(())
     }
