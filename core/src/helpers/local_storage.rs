@@ -104,6 +104,6 @@ impl LocalStorage {
 //   - save with no lists.json -> no presave_lists.json is created
 //   - after successful save -> no temp_lists.json left behind
 //   - failed save -> lists.json stays intact
-//   - startup copy -> startup_lists.json holds the content from process start
-//   - lock: second attempt to take lists.lock fails
+//   - startup copy -> startup_lists.json holds the content from process start (after TUI implementation)
+//   - lock: second attempt to take lists.lock fails (after TUI implementation)
 //   - Use tempfile crate as dev-dependency for temporary directories
