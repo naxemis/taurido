@@ -1,9 +1,9 @@
+use crate::errors::storage_error::StorageError;
+use crate::managers::list_manager::ListManager;
+use dirs::data_dir;
 use std::fs::File;
 use std::io::Write;
-use crate::errors::storage_error::StorageError;
-use dirs::data_dir;
 use std::path::PathBuf;
-use crate::managers::list_manager::ListManager;
 
 pub struct LocalStorage {
     _app_directory: PathBuf,
@@ -57,11 +57,24 @@ impl LocalStorage {
     }
 
     pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
-        let data = serde_json::to_string(manager).map_err(|source| StorageError::Serialization { source })?;
+        let data = serde_json::to_string(manager)
+            .map_err(|source| StorageError::Serialization { source })?;
 
-        let mut temp_file = File::create(&self.temp_lists_path).map_err(| source | StorageError::Io { path: self.temp_lists_path.clone(), source })?;
-        temp_file.write_all(data.as_bytes()).map_err(|source| StorageError::Io { path: self.temp_lists_path.clone(), source })?;
-        temp_file.sync_all().map_err(|source| StorageError::Io { path: self.temp_lists_path.clone(), source })?;
+        let mut temp_file =
+            File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
+                path: self.temp_lists_path.clone(),
+                source,
+            })?;
+        temp_file
+            .write_all(data.as_bytes())
+            .map_err(|source| StorageError::Io {
+                path: self.temp_lists_path.clone(),
+                source,
+            })?;
+        temp_file.sync_all().map_err(|source| StorageError::Io {
+            path: self.temp_lists_path.clone(),
+            source,
+        })?;
 
         Ok(())
     }
