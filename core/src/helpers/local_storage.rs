@@ -1,6 +1,7 @@
 use crate::errors::storage_error::StorageError;
 use dirs::data_dir;
 use std::path::PathBuf;
+use crate::managers::list_manager::ListManager;
 
 pub struct LocalStorage {
     app_directory: PathBuf,
@@ -8,10 +9,9 @@ pub struct LocalStorage {
 }
 
 // todo(storage): save_lists(&ListManager) -> Result<(), StorageError>
-//   1. Serialize the ListManager to a string - serde failure -> Err(Serialization)
-//   2. Write the string to temp_lists.json and sync_all - file failure -> Err(Io)
-//   3. If lists.json exists, copy it to presave_lists.json - copy failure -> Err(Io)
-//   4. Rename temp_lists.json -> lists.json - rename failure -> Err(Io)
+//   1. Write the string to temp_lists.json and sync_all - file failure -> Err(Io)
+//   2. If lists.json exists, copy it to presave_lists.json - copy failure -> Err(Io)
+//   3. Rename temp_lists.json -> lists.json - rename failure -> Err(Io)
 
 // todo(storage): load_lists() -> Result<Option<ListManager>, StorageError>
 //   - Ok(None) when lists.json does not exist (first start)
@@ -46,6 +46,12 @@ impl LocalStorage {
                 source,
             }),
         }
+    }
+
+    pub fn save_lists(manager: &ListManager) -> Result<(), StorageError> {
+        let data = serde_json::to_string(manager).map_err(|source| StorageError::Serialization { source })?;
+
+        Ok(())
     }
 }
 
