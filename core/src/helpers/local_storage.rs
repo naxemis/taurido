@@ -7,13 +7,12 @@ use std::path::PathBuf;
 
 pub struct LocalStorage {
     _app_directory: PathBuf,
-    _lists_path: PathBuf,
+    lists_path: PathBuf,
     temp_lists_path: PathBuf,
-    _presave_lists_path: PathBuf,
+    presave_lists_path: PathBuf,
 }
 
 // todo(storage): save_lists(&ListManager) -> Result<(), StorageError>
-//   3. If lists.json exists, copy it to presave_lists.json - copy failure -> Err(Io)
 //   4. Rename temp_lists.json -> lists.json - rename failure -> Err(Io)
 
 // todo(storage): load_lists() -> Result<Option<ListManager>, StorageError>
@@ -39,9 +38,9 @@ impl LocalStorage {
 
         Ok(Self {
             _app_directory: app_directory,
-            _lists_path: lists_path,
+            lists_path,
             temp_lists_path,
-            _presave_lists_path: presave_lists_path,
+            presave_lists_path,
         })
     }
 
@@ -56,24 +55,33 @@ impl LocalStorage {
     }
 
     pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
-        let data = serde_json::to_string(manager)
+        let current_data = serde_json::to_string(manager)
             .map_err(|source| StorageError::Serialization { source })?;
 
-        let mut temp_file =
+        let mut temp_lists =
             File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
                 path: self.temp_lists_path.clone(),
                 source,
             })?;
-        temp_file
-            .write_all(data.as_bytes())
+        temp_lists
+            .write_all(current_data.as_bytes())
             .map_err(|source| StorageError::Io {
                 path: self.temp_lists_path.clone(),
                 source,
             })?;
-        temp_file.sync_all().map_err(|source| StorageError::Io {
+        temp_lists.sync_all().map_err(|source| StorageError::Io {
             path: self.temp_lists_path.clone(),
             source,
         })?;
+
+        if self.lists_path.exists() {
+            std::fs::copy(&self.lists_path, &self.presave_lists_path).map_err(|source| {
+                StorageError::Io {
+                    path: self.presave_lists_path.clone(),
+                    source,
+                }
+            })?;
+        }
 
         Ok(())
     }
