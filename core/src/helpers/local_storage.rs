@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use crate::managers::list_manager::ListManager;
 
 pub struct LocalStorage {
-    app_directory: PathBuf,
-    lists_path: PathBuf,
+    _app_directory: PathBuf,
+    _lists_path: PathBuf,
 }
 
 // todo(storage): save_lists(&ListManager) -> Result<(), StorageError>
@@ -27,14 +27,14 @@ impl LocalStorage {
     pub fn new() -> Result<Self, StorageError> {
         let data_directory = data_dir().ok_or(StorageError::DataDirectoryNotFound)?;
 
-        let app_directory = data_directory.join("tuido");
-        let lists_path = app_directory.join("lists.json");
+        let _app_directory = data_directory.join("tuido");
+        let _lists_path = _app_directory.join("lists.json");
 
-        Self::create_directory(&app_directory)?;
+        Self::create_directory(&_app_directory)?;
 
         Ok(Self {
-            app_directory,
-            lists_path,
+            _app_directory,
+            _lists_path,
         })
     }
 
@@ -49,7 +49,7 @@ impl LocalStorage {
     }
 
     pub fn save_lists(manager: &ListManager) -> Result<(), StorageError> {
-        let data = serde_json::to_string(manager).map_err(|source| StorageError::Serialization { source })?;
+        let _data = serde_json::to_string(manager).map_err(|source| StorageError::Serialization { source })?;
 
         Ok(())
     }
