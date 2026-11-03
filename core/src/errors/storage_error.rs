@@ -8,11 +8,9 @@ pub enum StorageError {
         source: io::Error,
     },
     Serialization {
-        path: PathBuf,
         source: serde_json::Error,
     },
     Deserialization {
-        path: PathBuf,
         source: serde_json::Error,
     },
     DataDirectoryNotFound,
