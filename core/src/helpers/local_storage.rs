@@ -1,11 +1,14 @@
 use crate::errors::storage_error::StorageError;
 use dirs::data_dir;
 use std::path::PathBuf;
+use serde::Serialize;
 use crate::managers::list_manager::ListManager;
 
 pub struct LocalStorage {
     _app_directory: PathBuf,
-    _lists_path: PathBuf,
+    lists_path: PathBuf,
+    temp_lists_path: PathBuf,
+    presave_lists_path: PathBuf,
 }
 
 // todo(storage): save_lists(&ListManager) -> Result<(), StorageError>
@@ -27,14 +30,18 @@ impl LocalStorage {
     pub fn new() -> Result<Self, StorageError> {
         let data_directory = data_dir().ok_or(StorageError::DataDirectoryNotFound)?;
 
-        let _app_directory = data_directory.join("tuido");
-        let _lists_path = _app_directory.join("lists.json");
+        let app_directory = data_directory.join("tuido");
+        let lists_path = app_directory.join("lists.json");
+        let temp_lists_path = app_directory.join("temp_lists.json");
+        let presave_lists_path = app_directory.join("presave_lists.json");
 
-        Self::create_directory(&_app_directory)?;
+        Self::create_directory(&app_directory)?;
 
         Ok(Self {
-            _app_directory,
-            _lists_path,
+            _app_directory: app_directory,
+            lists_path,
+            temp_lists_path,
+            presave_lists_path,
         })
     }
 
@@ -48,7 +55,7 @@ impl LocalStorage {
         }
     }
 
-    pub fn save_lists(manager: &ListManager) -> Result<(), StorageError> {
+    pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
         let _data = serde_json::to_string(manager).map_err(|source| StorageError::Serialization { source })?;
 
         Ok(())
