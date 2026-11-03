@@ -16,11 +16,6 @@ pub struct LocalStorage {
 //   - Ok(None) when lists.json does not exist (first start)
 //   - Err(Io) on access errors, Err(Deserialization) on corrupt JSON
 
-// todo(storage): Atomic save of the whole ListManager
-//   1. Write temp_lists.json and sync_all
-//   2. Copy lists.json -> presave_lists.json
-//   3. Rename temp_lists.json -> lists.json
-
 // todo(recovery): On Deserialization error try presave_lists.json, then startup_lists.json (to confirm)
 impl LocalStorage {
     pub fn new() -> Result<Self, StorageError> {
