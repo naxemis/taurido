@@ -13,7 +13,6 @@ pub struct LocalStorage {
 }
 
 // todo(storage): save_lists(&ListManager) -> Result<(), StorageError>
-//   2. Write the string to temp_lists.json and sync_all - file failure -> Err(Io)
 //   3. If lists.json exists, copy it to presave_lists.json - copy failure -> Err(Io)
 //   4. Rename temp_lists.json -> lists.json - rename failure -> Err(Io)
 
