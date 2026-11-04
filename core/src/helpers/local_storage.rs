@@ -7,7 +7,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 pub struct LocalStorage {
-    _app_directory: PathBuf,
+    app_directory: PathBuf,
     lists_path: PathBuf,
     temp_lists_path: PathBuf,
     presave_lists_path: PathBuf,
@@ -40,12 +40,29 @@ impl LocalStorage {
         Self::create_directory(&app_directory)?;
 
         Ok(Self {
-            _app_directory: app_directory,
+            app_directory,
             lists_path,
             temp_lists_path,
             presave_lists_path,
             startup_lists_path,
         })
+    }
+
+    #[cfg(unix)]
+    fn sync_app_directory(path: &Path) -> Result<(), StorageError> {
+        let directory = File::open(path).map_err(|source| StorageError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        directory.sync_all().map_err(|source| StorageError::Io {
+            path: path.to_path_buf(),
+            source,
+        })
+    }
+
+    #[cfg(not(unix))]
+    fn sync_app_directory(_path: &Path) -> Result<(), StorageError> {
+        Ok(())
     }
 
     fn write_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
@@ -76,6 +93,8 @@ impl LocalStorage {
                 source,
             }
         })?;
+
+        Self::sync_app_directory(&self.app_directory)?;
 
         Ok(())
     }
@@ -426,9 +445,7 @@ mod tests {
         write_manager(&storage.lists_path, &manager_with_lists(&["Old"]));
         let lists_before = read_file(&storage.lists_path);
 
-        storage
-            .save_lists(&manager_with_lists(&["New"]))
-            .unwrap();
+        storage.save_lists(&manager_with_lists(&["New"])).unwrap();
 
         assert_eq!(read_file(&storage.presave_lists_path), lists_before);
         let written = read_manager(&storage.lists_path);
@@ -440,9 +457,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let storage = storage(&temp);
 
-        storage
-            .save_lists(&manager_with_lists(&["A"]))
-            .unwrap();
+        storage.save_lists(&manager_with_lists(&["A"])).unwrap();
 
         assert!(!storage.presave_lists_path.exists());
         let written = read_manager(&storage.lists_path);
@@ -454,9 +469,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let storage = storage(&temp);
 
-        storage
-            .save_lists(&manager_with_lists(&["A"]))
-            .unwrap();
+        storage.save_lists(&manager_with_lists(&["A"])).unwrap();
 
         assert!(!storage.temp_lists_path.exists());
     }
