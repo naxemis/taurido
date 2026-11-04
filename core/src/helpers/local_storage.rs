@@ -6,6 +6,11 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+// todo(storage): No format version. An older binary reading a newer file either
+//   parses it as corrupt or silently drops unknown fields on the next save.
+//   - Missing means 1; unknown version gets its own variant, never Deserialization,
+//     so the load loop stops instead of recovering a presave
+//   - The version belongs to the file envelope, not to ListManager
 pub struct LocalStorage {
     app_directory: PathBuf,
     lists_path: PathBuf,
@@ -48,6 +53,8 @@ impl LocalStorage {
         })
     }
 
+    // todo(storage): A failed directory sync fails the whole save even though the data
+    //   is already in place. Decide between failed save and durability warning.
     #[cfg(unix)]
     fn sync_app_directory(path: &Path) -> Result<(), StorageError> {
         let directory = File::open(path).map_err(|source| StorageError::Io {
@@ -69,6 +76,8 @@ impl LocalStorage {
         let data = serde_json::to_string(manager)
             .map_err(|source| StorageError::Serialization { source })?;
 
+        // todo(storage): On write_all or sync_all failure temp_lists.json is left behind.
+        //   Clean up on the operation result, not in Drop.
         {
             let mut temp_lists =
                 File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
@@ -99,6 +108,12 @@ impl LocalStorage {
         Ok(())
     }
 
+    // todo(storage): std::fs::copy cannot say which side failed, so errors always blame
+    //   the destination. The source is also copied before validation, so a corrupt
+    //   lists.json overwrites the last good presave.
+    //   - Read the source as raw bytes (NotFound means nothing to copy yet), then write
+    //     presave through temp + rename: a crash mid-copy must not truncate the backup
+    //   - Validate before copying, or skip the copy when the source does not parse
     fn copy_if_exists(from: &Path, to: &Path) -> Result<(), StorageError> {
         match std::fs::copy(from, to) {
             Ok(_) => Ok(()),
@@ -133,12 +148,17 @@ impl LocalStorage {
 
     pub fn load_lists(&self) -> Result<LoadOutcome, StorageError> {
         let mut first_error: Option<StorageError> = None;
+
+        // todo(storage): nothing writes startup_lists.json yet (TUI startup snapshot), so
+        //   the third candidate is dead weight until then.
         let candidates = [
             &self.lists_path,
             &self.presave_lists_path,
             &self.startup_lists_path,
         ];
 
+        // todo(refactor): index == 0 breaks silently if candidates are reordered; compare
+        //   against lists_path instead.
         for (index, path) in candidates.into_iter().enumerate() {
             match Self::read_lists_file(path) {
                 Ok(Some(manager)) => {
@@ -170,6 +190,16 @@ impl LocalStorage {
     }
 }
 
+// todo(tests): Cover the storage todos above
+//   - identical text across two saves (BTreeMap)
+//   - load without the version field, and with a future version
+//   - corrupt lists.json preserved next to the recovered one
+//   - temp file removed after a failed save
+//   - read-side failure names the source path
+//   - file text with keys in id order, compared against an expected literal
+//     (catches HashMap order; a two-save comparison would not)
+
+// todo(tests): Add startup snapshot and lock tests (waiting for TUI implementation)
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -492,5 +522,3 @@ mod tests {
         assert_eq!(read_file(&storage.lists_path), lists_before);
     }
 }
-
-// todo(tests): Add startup snapshot and lock tests (waiting for TUI implementation)
