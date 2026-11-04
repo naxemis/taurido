@@ -1,4 +1,5 @@
 use crate::errors::storage_error::StorageError;
+use crate::helpers::load_outcome::LoadOutcome;
 use crate::managers::list_manager::ListManager;
 use dirs::data_dir;
 use std::fs::File;
@@ -12,15 +13,6 @@ pub struct LocalStorage {
     presave_lists_path: PathBuf,
     startup_lists_path: PathBuf,
 }
-
-// todo(recovery): Report which file the lists were loaded from
-//   - load_lists returns Result<Option<ListManager>, StorageError>, so the caller cannot tell a normal load from a recovery
-//   - Add enum LoadOutcome:
-//       Loaded(ListManager)
-//       Recovered { manager: ListManager, source: PathBuf }
-//       Missing
-//   - Change load_lists to return Result<LoadOutcome, StorageError>; the write-back stays inside it
-//   - Source holds the fallback file path; core must stay free of user-facing text
 
 impl LocalStorage {
     pub fn new() -> Result<Self, StorageError> {
@@ -117,7 +109,7 @@ impl LocalStorage {
         }
     }
 
-    pub fn load_lists(&self) -> Result<Option<ListManager>, StorageError> {
+    pub fn load_lists(&self) -> Result<LoadOutcome, StorageError> {
         let mut first_error: Option<StorageError> = None;
         let candidates = [
             &self.lists_path,
@@ -128,10 +120,16 @@ impl LocalStorage {
         for (index, path) in candidates.into_iter().enumerate() {
             match Self::read_lists_file(path) {
                 Ok(Some(manager)) => {
-                    if index > 0 {
-                        self.write_lists(&manager)?;
+                    if index == 0 {
+                        return Ok(LoadOutcome::Loaded(manager));
                     }
-                    return Ok(Some(manager));
+
+                    self.write_lists(&manager)?;
+
+                    return Ok(LoadOutcome::Recovered {
+                        manager,
+                        source: path.to_path_buf(),
+                    });
                 }
                 Ok(None) => {}
                 Err(error @ StorageError::Deserialization { .. }) => {
@@ -144,7 +142,7 @@ impl LocalStorage {
         }
 
         match first_error {
-            None => Ok(None),
+            None => Ok(LoadOutcome::Missing),
             Some(first_error) => Err(first_error),
         }
     }
