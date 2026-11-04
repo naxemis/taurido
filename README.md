@@ -10,7 +10,7 @@ Project is under development. Code from old repository has been rebuilded.
 - [x] Creating, removing, and renaming columns (e.g. backlog, in progress, etc.)
 - [x] Creating, deleting, and renaming cards in lists
 - [x] Moving cards between columns
-- [ ] Saving lists in separate JSON files after every change
+- [ ] Saving lists in JSON file
 - [ ] TUI using Ratatui
 ### Full Release:
 - [ ] Importing and exporting lists to and from the user's desktop
