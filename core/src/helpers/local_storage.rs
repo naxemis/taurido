@@ -58,7 +58,7 @@ impl LocalStorage {
     }
 
     pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
-        let current_data = serde_json::to_string(manager)
+        let data = serde_json::to_string(manager)
             .map_err(|source| StorageError::Serialization { source })?;
 
         {
@@ -68,7 +68,7 @@ impl LocalStorage {
                     source,
                 })?;
             temp_lists
-                .write_all(current_data.as_bytes())
+                .write_all(data.as_bytes())
                 .map_err(|source| StorageError::Io {
                     path: self.temp_lists_path.clone(),
                     source,
