@@ -12,10 +12,6 @@ pub struct LocalStorage {
     presave_lists_path: PathBuf,
 }
 
-// todo(storage): load_lists() -> Result<Option<ListManager>, StorageError>
-//   - Ok(None) when lists.json does not exist (first start)
-//   - Err(Io) on access errors, Err(Deserialization) on corrupt JSON
-
 // todo(recovery): On Deserialization error try presave_lists.json, then startup_lists.json (to confirm)
 impl LocalStorage {
     pub fn new() -> Result<Self, StorageError> {
@@ -89,6 +85,17 @@ impl LocalStorage {
         })?;
 
         Ok(())
+    }
+
+    pub fn load_lists(&self) -> Result<Option<ListManager>, StorageError> {
+        match std::fs::read_to_string(&self.lists_path) {
+            Ok(data) => {
+                let manager = serde_json::from_str::<ListManager>(&data).map_err(|source| StorageError::Deserialization { source })?;
+                Ok(Some(manager))
+            },
+            Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(source) => Err(StorageError::Io {path: self.lists_path.clone(), source}),
+        }
     }
 }
 
