@@ -148,31 +148,26 @@ impl LocalStorage {
     }
 }
 
-// todo(tests): Write tests for methods
-//   - Tests go in #[cfg(test)] mod tests at the bottom of this file
-//   - Make the base directory injectable: new() calls new_in(data_dir()), tests call new_in(temp_dir)
-//   - load_lists: no candidate file exists -> Ok(None)
-//   - load_lists: valid JSON -> Ok(Some) with next_id preserved
-//   - load_lists: corrupt lists.json, no fallbacks -> Err(Deserialization)
-//   - load_lists: corrupt lists.json + valid presave_lists.json -> Ok(Some) from presave
-//   - load_lists: corrupt lists.json + corrupt presave + valid startup_lists.json -> Ok(Some) from startup
-//   - load_lists: every existing candidate corrupt -> Err(Deserialization) carries the lists.json error, not the last one
-//   - load_lists: lists.json is a directory -> Err(Io), even when presave_lists.json is valid
-//   - load_lists: presave_lists.json is a directory while lists.json is corrupt -> Err(Io)
-//   - load_lists: lists.json missing but presave_lists.json valid -> Ok(Some) from presave (confirm intended)
-//   - load_lists: lists.json missing and no fallbacks -> Ok(None)
-//   - recovery: lists.json is rewritten with the recovered content
-//   - recovery: lists.json rewrite does not touch presave_lists.json (last good snapshot is kept)
-//   - recovery: lists.json missing -> recovery recreates it from the fallback
-//   - recovery: no temp_lists.json left behind after a successful write-back
-//   - recovery: all candidates corrupt -> lists.json stays byte-for-byte unchanged
-//   - recovery: failed write-back -> Err(Io) and the recovered state is not silently dropped
-//   - save round-trip: loaded state equals saved state, and next_id > 0 is kept
-//   - save with existing lists.json -> presave_lists.json holds the previous content
-//   - save with no lists.json -> no presave_lists.json is created
-//   - save after recovery -> presave_lists.json holds the recovered content, not the corrupt one
-//   - after successful save -> no temp_lists.json left behind
-//   - failed save -> lists.json stays intact
-//   - startup copy -> startup_lists.json holds the content from process start (after TUI implementation)
-//   - lock: second attempt to take lists.lock fails (after TUI implementation)
-//   - Use tempfile crate as dev-dependency for temporary directories
+// todo(tests): Add tests for LocalStorage methods
+//   - Put tests in #[cfg(test)] mod tests at the bottom of this file
+//   - Add a constructor that accepts a data directory; use a tempfile directory in tests
+//   - load_lists: no candidate files exist -> LoadOutcome::Missing
+//   - load_lists: valid lists.json -> LoadOutcome::Loaded
+//   - load_lists: valid lists.json preserves next_id (the next added list gets the expected ID)
+//   - load_lists: missing lists.json and valid presave_lists.json -> Recovered from presave_lists.json
+//   - load_lists: corrupt lists.json and valid presave_lists.json -> Recovered from presave_lists.json
+//   - load_lists: corrupt lists.json and presave_lists.json, valid startup_lists.json -> Recovered from startup_lists.json
+//   - load_lists: all candidates are corrupt -> Deserialization error from the first corrupt candidate
+//   - load_lists: a non-NotFound read error -> Io error; do not continue to fallback candidates
+//   - recovery: recovered data is written to lists.json
+//   - recovery: existing presave_lists.json is not changed by recovery
+//   - recovery: missing lists.json is created from a valid fallback
+//   - recovery: successful write-back leaves no temp_lists.json
+//   - recovery: failed write-back returns Io and does not replace lists.json
+//   - save_lists: saved data can be loaded back, with next_id preserved
+//   - save_lists: existing lists.json is copied to presave_lists.json before saving
+//   - save_lists: missing lists.json does not create presave_lists.json
+//   - save_lists: successful save leaves no temp_lists.json
+//   - save_lists: failed write leaves the existing lists.json unchanged
+//   - Use the tempfile crate as a dev-dependency
+//   - Add startup snapshot and lock tests after those features are implemented
