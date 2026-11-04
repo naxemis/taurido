@@ -90,11 +90,16 @@ impl LocalStorage {
     pub fn load_lists(&self) -> Result<Option<ListManager>, StorageError> {
         match std::fs::read_to_string(&self.lists_path) {
             Ok(data) => {
-                let manager = serde_json::from_str::<ListManager>(&data).map_err(|source| StorageError::Deserialization { source })?;
+                let manager = serde_json::from_str::<ListManager>(&data)
+                    .map_err(|source| StorageError::Deserialization { source })?;
+
                 Ok(Some(manager))
-            },
+            }
             Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(source) => Err(StorageError::Io {path: self.lists_path.clone(), source}),
+            Err(source) => Err(StorageError::Io {
+                path: self.lists_path.clone(),
+                source,
+            }),
         }
     }
 }
