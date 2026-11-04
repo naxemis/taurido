@@ -17,7 +17,20 @@ pub struct LocalStorage {
 impl LocalStorage {
     pub fn new() -> Result<Self, StorageError> {
         let data_directory = data_dir().ok_or(StorageError::DataDirectoryNotFound)?;
+        Self::with_data_directory(data_directory)
+    }
 
+    fn create_directory(path: &Path) -> Result<(), StorageError> {
+        match std::fs::create_dir_all(path) {
+            Ok(()) => Ok(()),
+            Err(source) => Err(StorageError::Io {
+                path: path.to_path_buf(),
+                source,
+            }),
+        }
+    }
+
+    fn with_data_directory(data_directory: PathBuf) -> Result<Self, StorageError> {
         let app_directory = data_directory.join("tuido");
         let lists_path = app_directory.join("lists.json");
         let temp_lists_path = app_directory.join("temp_lists.json");
@@ -33,16 +46,6 @@ impl LocalStorage {
             presave_lists_path,
             startup_lists_path,
         })
-    }
-
-    fn create_directory(path: &Path) -> Result<(), StorageError> {
-        match std::fs::create_dir_all(path) {
-            Ok(()) => Ok(()),
-            Err(source) => Err(StorageError::Io {
-                path: path.to_path_buf(),
-                source,
-            }),
-        }
     }
 
     fn write_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
@@ -148,9 +151,17 @@ impl LocalStorage {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn _storage(temp: &TempDir) -> LocalStorage {
+        LocalStorage::with_data_directory(temp.path().to_path_buf()).unwrap()
+    }
+}
+
 // todo(tests): Add tests for LocalStorage methods
-//   - Put tests in #[cfg(test)] mod tests at the bottom of this file
-//   - Add a constructor that accepts a data directory; use a tempfile directory in tests
 //   - load_lists: no candidate files exist -> LoadOutcome::Missing
 //   - load_lists: valid lists.json -> LoadOutcome::Loaded
 //   - load_lists: valid lists.json preserves next_id (the next added list gets the expected ID)
