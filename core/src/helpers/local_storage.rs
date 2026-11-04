@@ -156,20 +156,170 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    fn _storage(temp: &TempDir) -> LocalStorage {
+    fn storage(temp: &TempDir) -> LocalStorage {
         LocalStorage::with_data_directory(temp.path().to_path_buf()).unwrap()
+    }
+
+    fn write_file(path: &Path, contents: &str) {
+        std::fs::write(path, contents).unwrap();
+    }
+
+    fn write_manager(path: &Path, manager: &ListManager) {
+        write_file(path, &serde_json::to_string(manager).unwrap());
+    }
+
+    fn manager_with_lists(names: &[&str]) -> ListManager {
+        let mut manager = ListManager::new();
+
+        for name in names {
+            manager.add(name).unwrap();
+        }
+
+        manager
+    }
+
+    fn loaded_manager(outcome: LoadOutcome) -> ListManager {
+        match outcome {
+            LoadOutcome::Loaded(manager) => manager,
+            other => panic!("Expected Loaded, got {other:?}"),
+        }
+    }
+
+    fn recovered_manager(outcome: LoadOutcome) -> (ListManager, PathBuf) {
+        match outcome {
+            LoadOutcome::Recovered { manager, source } => (manager, source),
+            other => panic!("Expected Recovered, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn load_lists_returns_missing_when_no_candidate_files_exist() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+
+        let outcome = storage.load_lists().unwrap();
+
+        assert!(matches!(outcome, LoadOutcome::Missing));
+    }
+
+    #[test]
+    fn load_lists_returns_loaded_from_lists_json() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_manager(&storage.lists_path, &manager_with_lists(&["A"]));
+
+        let manager = loaded_manager(storage.load_lists().unwrap());
+
+        let list = manager.get_by_id(0).expect("List should be loaded");
+        assert_eq!(list.get_name(), "A");
+    }
+
+    #[test]
+    fn load_lists_preserves_next_id() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+
+        let mut saved = manager_with_lists(&["A", "B"]);
+        saved.remove(0);
+        write_manager(&storage.lists_path, &saved);
+
+        let mut manager = loaded_manager(storage.load_lists().unwrap());
+
+        assert_eq!(manager.add("C"), Ok(2));
+        assert_eq!(manager.get_by_id(2).unwrap().get_name(), "C");
+    }
+
+    #[test]
+    fn load_lists_recovers_from_presave_when_lists_json_is_missing() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_manager(
+            &storage.presave_lists_path,
+            &manager_with_lists(&["Presaved"]),
+        );
+
+        let (manager, source) = recovered_manager(storage.load_lists().unwrap());
+
+        assert_eq!(source, storage.presave_lists_path);
+        assert_eq!(manager.get_by_id(0).unwrap().get_name(), "Presaved");
+    }
+
+    #[test]
+    fn load_lists_recovers_from_presave_when_lists_json_is_corrupt() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_file(&storage.lists_path, "Invalid json");
+        write_manager(
+            &storage.presave_lists_path,
+            &manager_with_lists(&["Presaved"]),
+        );
+
+        let (manager, source) = recovered_manager(storage.load_lists().unwrap());
+
+        assert_eq!(source, storage.presave_lists_path);
+        assert_eq!(manager.get_by_id(0).unwrap().get_name(), "Presaved");
+    }
+
+    #[test]
+    fn load_lists_recovers_from_startup_when_earlier_candidates_are_unusable() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_file(&storage.lists_path, "Invalid json");
+        write_file(&storage.presave_lists_path, "Invalid json");
+        write_manager(
+            &storage.startup_lists_path,
+            &manager_with_lists(&["From startup"]),
+        );
+
+        let (manager, source) = recovered_manager(storage.load_lists().unwrap());
+
+        assert_eq!(source, storage.startup_lists_path);
+        assert_eq!(manager.get_by_id(0).unwrap().get_name(), "From startup");
+    }
+
+    #[test]
+    fn load_lists_returns_first_deserialization_error_when_all_candidates_are_corrupt() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        let corrupt_lists = "Invalid json";
+        write_file(&storage.lists_path, corrupt_lists);
+        write_file(&storage.presave_lists_path, "[]");
+        write_file(&storage.startup_lists_path, "{}");
+
+        let expected = serde_json::from_str::<ListManager>(corrupt_lists)
+            .err()
+            .expect("Corrupt input should fail to deserialize")
+            .to_string();
+
+        match storage.load_lists() {
+            Err(StorageError::Deserialization { source }) => {
+                assert_eq!(source.to_string(), expected);
+            }
+            other => panic!("Expected Deserialization error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn load_lists_returns_io_error_without_trying_fallback_candidates() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        // Reading a directory produces a non-NotFound I/O error.
+        std::fs::create_dir(&storage.lists_path).unwrap();
+        write_manager(
+            &storage.presave_lists_path,
+            &manager_with_lists(&["Presaved"]),
+        );
+
+        match storage.load_lists() {
+            Err(StorageError::Io { path, .. }) => {
+                assert_eq!(path, storage.lists_path);
+            }
+            other => panic!("Expected Io error, got {other:?}"),
+        }
     }
 }
 
 // todo(tests): Add tests for LocalStorage methods
-//   - load_lists: no candidate files exist -> LoadOutcome::Missing
-//   - load_lists: valid lists.json -> LoadOutcome::Loaded
-//   - load_lists: valid lists.json preserves next_id (the next added list gets the expected ID)
-//   - load_lists: missing lists.json and valid presave_lists.json -> Recovered from presave_lists.json
-//   - load_lists: corrupt lists.json and valid presave_lists.json -> Recovered from presave_lists.json
-//   - load_lists: corrupt lists.json and presave_lists.json, valid startup_lists.json -> Recovered from startup_lists.json
-//   - load_lists: all candidates are corrupt -> Deserialization error from the first corrupt candidate
-//   - load_lists: a non-NotFound read error -> Io error; do not continue to fallback candidates
 //   - recovery: recovered data is written to lists.json
 //   - recovery: existing presave_lists.json is not changed by recovery
 //   - recovery: missing lists.json is created from a valid fallback
