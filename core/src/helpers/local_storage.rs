@@ -404,12 +404,80 @@ mod tests {
 
         assert_eq!(read_file(&storage.lists_path), corrupt_lists);
     }
+
+    #[test]
+    fn save_lists_saves_data_that_can_be_loaded_back_with_next_id() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        let mut saved = manager_with_lists(&["A", "B"]);
+        saved.remove(0);
+
+        storage.save_lists(&saved).unwrap();
+
+        let mut loaded = loaded_manager(storage.load_lists().unwrap());
+        assert_eq!(loaded.get_by_id(1).unwrap().get_name(), "B");
+        assert_eq!(loaded.add("C"), Ok(2));
+    }
+
+    #[test]
+    fn save_lists_copies_existing_lists_json_to_presave_before_saving() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_manager(&storage.lists_path, &manager_with_lists(&["Old"]));
+        let lists_before = read_file(&storage.lists_path);
+
+        storage
+            .save_lists(&manager_with_lists(&["New"]))
+            .unwrap();
+
+        assert_eq!(read_file(&storage.presave_lists_path), lists_before);
+        let written = read_manager(&storage.lists_path);
+        assert_eq!(written.get_by_id(0).unwrap().get_name(), "New");
+    }
+
+    #[test]
+    fn save_lists_does_not_create_presave_when_lists_json_is_missing() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+
+        storage
+            .save_lists(&manager_with_lists(&["A"]))
+            .unwrap();
+
+        assert!(!storage.presave_lists_path.exists());
+        let written = read_manager(&storage.lists_path);
+        assert_eq!(written.get_by_id(0).unwrap().get_name(), "A");
+    }
+
+    #[test]
+    fn save_lists_leaves_no_temp_lists_json_after_successful_save() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+
+        storage
+            .save_lists(&manager_with_lists(&["A"]))
+            .unwrap();
+
+        assert!(!storage.temp_lists_path.exists());
+    }
+
+    #[test]
+    fn save_lists_returns_io_error_and_keeps_lists_json_when_write_fails() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_manager(&storage.lists_path, &manager_with_lists(&["Old"]));
+        let lists_before = read_file(&storage.lists_path);
+        std::fs::create_dir(&storage.temp_lists_path).unwrap();
+
+        match storage.save_lists(&manager_with_lists(&["New"])) {
+            Err(StorageError::Io { path, .. }) => {
+                assert_eq!(path, storage.temp_lists_path);
+            }
+            other => panic!("Expected Io error, got {other:?}"),
+        }
+
+        assert_eq!(read_file(&storage.lists_path), lists_before);
+    }
 }
 
-// todo(tests): Add tests for LocalStorage methods
-//   - save_lists: saved data can be loaded back, with next_id preserved
-//   - save_lists: existing lists.json is copied to presave_lists.json before saving
-//   - save_lists: missing lists.json does not create presave_lists.json
-//   - save_lists: successful save leaves no temp_lists.json
-//   - save_lists: failed write leaves the existing lists.json unchanged
-//   - Add startup snapshot and lock tests after those features are implemented
+// todo(tests): Add startup snapshot and lock tests (waiting for TUI implementation)
