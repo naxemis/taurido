@@ -70,9 +70,7 @@ impl LocalStorage {
     }
 
     #[cfg(not(unix))]
-    fn sync_app_directory(_path: &Path) {
-        Ok(())
-    }
+    fn sync_app_directory(_path: &Path) {}
 
     fn write_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
         let lists_file = ListsFile {
