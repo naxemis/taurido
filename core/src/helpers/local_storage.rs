@@ -20,6 +20,7 @@ pub struct LocalStorage {
     lists_path: PathBuf,
     temp_lists_path: PathBuf,
     presave_lists_path: PathBuf,
+    temp_presave_lists_path: PathBuf,
     startup_lists_path: PathBuf,
 }
 
@@ -46,6 +47,7 @@ impl LocalStorage {
         let lists_path = app_directory.join("lists.json");
         let temp_lists_path = app_directory.join("temp_lists.json");
         let presave_lists_path = app_directory.join("presave_lists.json");
+        let temp_presave_lists_path = app_directory.join("temp_presave_lists.json");
         let startup_lists_path = app_directory.join("startup_lists.json");
 
         Self::create_directory(&app_directory)?;
@@ -55,6 +57,7 @@ impl LocalStorage {
             lists_path,
             temp_lists_path,
             presave_lists_path,
+            temp_presave_lists_path,
             startup_lists_path,
         })
     }
@@ -129,25 +132,27 @@ impl LocalStorage {
         Ok(())
     }
 
-    // todo(storage): std::fs::copy cannot say which side failed, so errors always blame
-    //   the destination. The source is also copied before validation, so a corrupt
-    //   lists.json overwrites the last good presave.
-    //   - Read the source as raw bytes (NotFound means nothing to copy yet), then write
-    //     presave through temp + rename: a crash mid-copy must not truncate the backup
-    //   - Validate before copying, or skip the copy when the source does not parse
-    fn copy_if_exists(from: &Path, to: &Path) -> Result<(), StorageError> {
-        match std::fs::copy(from, to) {
-            Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Ok(_) => Ok(()),
-            Err(source) => Err(StorageError::Io {
-                path: to.to_path_buf(),
-                source,
-            }),
+    fn copy_lists_to_presave(&self) -> Result<(), StorageError> {
+        match Self::read_lists_bytes(&self.lists_path) {
+            Ok(None) => Ok(()),
+            Ok(Some(data)) => match Self::parse_lists_bytes(&self.lists_path, &data) {
+                Ok(_) => self.replace_atomically(
+                    &data,
+                    &self.temp_presave_lists_path,
+                    &self.presave_lists_path,
+                ),
+                Err(
+                    StorageError::Deserialization { .. }
+                    | StorageError::UnsupportedFormatVersion { .. },
+                ) => Ok(()),
+                Err(error) => Err(error),
+            },
+            Err(error) => Err(error),
         }
     }
 
     pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
-        Self::copy_if_exists(&self.lists_path, &self.presave_lists_path)?;
+        self.copy_lists_to_presave()?;
         self.write_lists(manager)
     }
 
@@ -242,12 +247,14 @@ impl LocalStorage {
     }
 }
 
-// todo(tests): Cover the storage todos above
+// todo(tests): Cover the presave backup in save_lists
+//   - corrupt lists.json leaves the last good presave unchanged
+//   - future format version in lists.json skips the backup
+//   - temp presave blocked by a directory fails with its own path, lists.json and presave unchanged
+//   - successful backup leaves no temp presave behind
+// todo(tests): Cover the remaining storage cases
 //   - identical text across two saves (BTreeMap)
 //   - load without the version field, and with a future version
-//   - corrupt lists.json preserved next to the recovered one
-//   - temp file removed after a failed save
-//   - read-side failure names the source path
 //   - file text with keys in id order, compared against an expected literal
 //     (catches HashMap order; a two-save comparison would not)
 
