@@ -185,8 +185,7 @@ impl LocalStorage {
     pub fn load_lists(&self) -> Result<LoadOutcome, StorageError> {
         let mut first_error: Option<StorageError> = None;
 
-        // todo(storage): nothing writes startup_lists.json yet (TUI startup snapshot), so
-        //   the third candidate is dead weight until then.
+        // todo(storage): nothing writes startup_lists.json yet (waiting for TUI implementation)
         let candidates = [
             &self.lists_path,
             &self.presave_lists_path,
