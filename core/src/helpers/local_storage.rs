@@ -214,12 +214,10 @@ impl LocalStorage {
             &self.startup_lists_path,
         ];
 
-        // todo(refactor): index == 0 breaks silently if candidates are reordered; compare
-        //   against lists_path instead.
-        for (index, path) in candidates.into_iter().enumerate() {
+        for path in candidates {
             match Self::read_lists_file(path) {
                 Ok(Some(manager)) => {
-                    if index == 0 {
+                    if path == &self.lists_path {
                         return Ok(LoadOutcome::Loaded(manager));
                     }
 
