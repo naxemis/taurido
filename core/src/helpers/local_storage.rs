@@ -83,32 +83,42 @@ impl LocalStorage {
         let data = serde_json::to_string(&lists_file)
             .map_err(|source| StorageError::Serialization { source })?;
 
-        // todo(storage): On write_all or sync_all failure temp_lists.json is left behind.
-        //   Clean up on the operation result, not in Drop.
-        {
-            let mut temp_lists =
-                File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
+        let result = (|| -> Result<(), StorageError> {
+            {
+                let mut temp_lists =
+                    File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
+                        path: self.temp_lists_path.clone(),
+                        source,
+                    })?;
+                temp_lists
+                    .write_all(data.as_bytes())
+                    .map_err(|source| StorageError::Io {
+                        path: self.temp_lists_path.clone(),
+                        source,
+                    })?;
+                temp_lists.sync_all().map_err(|source| StorageError::Io {
                     path: self.temp_lists_path.clone(),
                     source,
                 })?;
-            temp_lists
-                .write_all(data.as_bytes())
-                .map_err(|source| StorageError::Io {
-                    path: self.temp_lists_path.clone(),
-                    source,
-                })?;
-            temp_lists.sync_all().map_err(|source| StorageError::Io {
-                path: self.temp_lists_path.clone(),
-                source,
-            })?;
-        }
-
-        std::fs::rename(&self.temp_lists_path, &self.lists_path).map_err(|source| {
-            StorageError::Io {
-                path: self.lists_path.clone(),
-                source,
             }
-        })?;
+
+            std::fs::rename(&self.temp_lists_path, &self.lists_path).map_err(|source| {
+                StorageError::Io {
+                    path: self.lists_path.clone(),
+                    source,
+                }
+            })?;
+
+            Ok(())
+        })();
+
+        match result {
+            Ok(()) => {}
+            Err(error) => {
+                let _ = std::fs::remove_file(&self.temp_lists_path);
+                return Err(error);
+            }
+        };
 
         Self::sync_app_directory(&self.app_directory);
 
