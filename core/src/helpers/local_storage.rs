@@ -20,6 +20,8 @@ pub struct LocalStorage {
 }
 
 impl LocalStorage {
+    pub const FORMAT_VERSION: u16 = 1;
+
     pub fn new() -> Result<Self, StorageError> {
         let data_directory = data_dir().ok_or(StorageError::DataDirectoryNotFound)?;
         Self::with_data_directory(data_directory)
