@@ -2,6 +2,7 @@ use crate::errors::storage_error::StorageError;
 use crate::helpers::load_outcome::LoadOutcome;
 use crate::managers::list_manager::ListManager;
 use dirs::data_dir;
+use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -11,6 +12,14 @@ use std::path::{Path, PathBuf};
 //   - Missing means 1; unknown version gets its own variant, never Deserialization,
 //     so the load loop stops instead of recovering a presave
 //   - The version belongs to the file envelope, not to ListManager
+#[derive(Serialize)]
+struct ListsFile<'manager> {
+    format_version: u16,
+    #[serde(flatten)]
+    list_manager: &'manager ListManager,
+}
+
+// Write-only, ready with serde_json::Value
 pub struct LocalStorage {
     app_directory: PathBuf,
     lists_path: PathBuf,
@@ -75,7 +84,12 @@ impl LocalStorage {
     }
 
     fn write_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
-        let data = serde_json::to_string(manager)
+        let lists_file = ListsFile {
+            format_version: Self::FORMAT_VERSION,
+            list_manager: manager,
+        };
+
+        let data = serde_json::to_string(&lists_file)
             .map_err(|source| StorageError::Serialization { source })?;
 
         // todo(storage): On write_all or sync_all failure temp_lists.json is left behind.
