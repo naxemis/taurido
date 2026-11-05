@@ -1,18 +1,20 @@
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::errors::card_error::CardError;
 use crate::errors::card_move_error::CardMoveError;
 use crate::models::card::Card;
 
+#[derive(Serialize, Deserialize)]
 pub(crate) struct CardManager {
-    cards: HashMap<u16, Card>,
+    cards: BTreeMap<u16, Card>,
     next_id: u32,
 }
 
 impl CardManager {
     pub(crate) fn new() -> Self {
         Self {
-            cards: HashMap::new(),
+            cards: BTreeMap::new(),
             next_id: 0,
         }
     }

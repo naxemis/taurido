@@ -1,9 +1,12 @@
+use serde::{Deserialize, Serialize};
+
 use crate::errors::card_error::CardError;
 use crate::errors::card_move_error::CardMoveError;
 use crate::managers::card_manager::CardManager;
 use crate::models::card::Card;
 
 /// A column in a to-do list identified by an ID, name, and position.
+#[derive(Serialize, Deserialize)]
 pub struct Column {
     id: u8,
     name: String,
@@ -13,7 +16,7 @@ pub struct Column {
 
 impl Column {
     /// Creates a column with the given ID, name, and position.
-    pub fn new(id: u8, name: String, column_place: u8) -> Self {
+    pub(crate) fn new(id: u8, name: String, column_place: u8) -> Self {
         Self {
             id,
             name,
@@ -53,7 +56,7 @@ impl Column {
     ///
     /// Returns the generated card ID, or a [`CardError`] if the name is empty
     /// or no more card IDs or positions are available.
-    pub fn add_card(&mut self, name: &str) -> Result<u16, CardError> {
+    pub(crate) fn add_card(&mut self, name: &str) -> Result<u16, CardError> {
         self.card_manager.add(name)
     }
 
@@ -69,7 +72,11 @@ impl Column {
     ///
     /// Cards at or after the target position are shifted one place to the
     /// right. The inserted card keeps its ID, name, and description.
-    pub fn insert_card(&mut self, card: Card, target_place: u16) -> Result<u16, CardMoveError> {
+    pub(crate) fn insert_card(
+        &mut self,
+        card: Card,
+        target_place: u16,
+    ) -> Result<u16, CardMoveError> {
         self.card_manager.insert(card, target_place)
     }
 
@@ -77,7 +84,7 @@ impl Column {
     ///
     /// Cards after the removed card are shifted one place to the left.
     /// Returns the removed card, or `None` if no card has the given ID.
-    pub fn remove_card(&mut self, id: u16) -> Option<Card> {
+    pub(crate) fn remove_card(&mut self, id: u16) -> Option<Card> {
         self.card_manager.remove(id)
     }
 
@@ -96,12 +103,12 @@ impl Column {
     /// Renames a card.
     ///
     /// Leading and trailing whitespace is removed from `name`.
-    pub fn rename_card(&mut self, id: u16, name: &str) -> Result<(), CardError> {
+    pub(crate) fn rename_card(&mut self, id: u16, name: &str) -> Result<(), CardError> {
         self.card_manager.rename(id, name)
     }
 
     /// Replaces the description of a card.
-    pub fn change_card_description(
+    pub(crate) fn change_card_description(
         &mut self,
         id: u16,
         new_description: &str,

@@ -2,7 +2,7 @@
 Simple terminal to-do app built with Ratatui. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON and synchronize with git using commands.
 
 ## Project Status
-Project is under development. Old repository was lost, rebuilding `core/` with old code.
+Project is under development. Code from old repository has been rebuilded.
 
 ## Features
 ### Minimal Viable Product:
@@ -10,7 +10,7 @@ Project is under development. Old repository was lost, rebuilding `core/` with o
 - [x] Creating, removing, and renaming columns (e.g. backlog, in progress, etc.)
 - [x] Creating, deleting, and renaming cards in lists
 - [x] Moving cards between columns
-- [ ] Saving lists in separate JSON files after every change
+- [x] Saving and loading lists from JSON file
 - [ ] TUI using Ratatui
 ### Full Release:
 - [ ] Importing and exporting lists to and from the user's desktop
