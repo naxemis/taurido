@@ -7,11 +7,6 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-// todo(storage): No format version. An older binary reading a newer file either
-//   parses it as corrupt or silently drops unknown fields on the next save.
-//   - Missing means 1; unknown version gets its own variant, never Deserialization,
-//     so the load loop stops instead of recovering a presave
-//   - The version belongs to the file envelope, not to ListManager
 #[derive(Serialize)]
 struct ListsFile<'manager> {
     format_version: u16,
@@ -132,8 +127,8 @@ impl LocalStorage {
     //   - Validate before copying, or skip the copy when the source does not parse
     fn copy_if_exists(from: &Path, to: &Path) -> Result<(), StorageError> {
         match std::fs::copy(from, to) {
-            Ok(_) => Ok(()),
             Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Ok(_) => Ok(()),
             Err(source) => Err(StorageError::Io {
                 path: to.to_path_buf(),
                 source,
@@ -148,13 +143,32 @@ impl LocalStorage {
 
     fn read_lists_file(path: &Path) -> Result<Option<ListManager>, StorageError> {
         match std::fs::read_to_string(path) {
+            Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Ok(data) => {
-                let manager = serde_json::from_str::<ListManager>(&data)
+                let mut document: serde_json::Value = serde_json::from_str(&data)
+                    .map_err(|source| StorageError::Deserialization { source })?;
+
+                let format_version = document
+                    .as_object_mut()
+                    .and_then(|map| map.remove("format_version"));
+                let format_version = match format_version {
+                    None => 1,
+                    Some(value) => serde_json::from_value::<u64>(value)
+                        .map_err(|source| StorageError::Deserialization { source })?,
+                };
+
+                if format_version != u64::from(Self::FORMAT_VERSION) {
+                    return Err(StorageError::UnsupportedFormatVersion {
+                        path: path.to_path_buf(),
+                        version_found: format_version,
+                    });
+                };
+
+                let manager = serde_json::from_value::<ListManager>(document)
                     .map_err(|source| StorageError::Deserialization { source })?;
 
                 Ok(Some(manager))
             }
-            Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(source) => Err(StorageError::Io {
                 path: path.to_path_buf(),
                 source,
