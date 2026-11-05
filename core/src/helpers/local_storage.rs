@@ -7,6 +7,9 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+/// On-disk layout of `lists.json`: the format version followed by the list data.
+///
+/// The fields of [`ListManager`] are flattened into the same JSON object.
 #[derive(Serialize)]
 struct ListsFile<'manager> {
     format_version: u16,
@@ -14,7 +17,15 @@ struct ListsFile<'manager> {
     list_manager: &'manager ListManager,
 }
 
-// Write-only, ready with serde_json::Value
+/// Stores the lists file in the application's data directory.
+///
+/// Files are stored in a `tuido` subdirectory of the platform data directory.
+/// Each write goes to a temporary file first and then replaces the target, so an
+/// interrupted write does not leave a partially written file behind.
+///
+/// Lists are only serialized through this struct. When reading, the JSON is first
+/// parsed as a `serde_json::Value` so that `format_version` can be checked before the
+/// list data is deserialized.
 pub struct LocalStorage {
     app_directory: PathBuf,
     lists_path: PathBuf,
@@ -25,13 +36,23 @@ pub struct LocalStorage {
 }
 
 impl LocalStorage {
+    /// Format version written to `lists.json`. Only this version can be loaded.
     pub const FORMAT_VERSION: u16 = 1;
 
+    /// Creates storage in the platform data directory.
+    ///
+    /// Creates the `tuido` directory if it does not exist.
+    ///
+    /// Returns [`StorageError::DataDirectoryNotFound`] if the data directory cannot be
+    /// determined, or [`StorageError::Io`] if the application directory cannot be created.
     pub fn new() -> Result<Self, StorageError> {
         let data_directory = data_dir().ok_or(StorageError::DataDirectoryNotFound)?;
         Self::with_data_directory(data_directory)
     }
 
+    /// Creates `path` and any missing parent directories.
+    ///
+    /// Returns [`StorageError::Io`] with `path` if the directory cannot be created.
     fn create_directory(path: &Path) -> Result<(), StorageError> {
         match std::fs::create_dir_all(path) {
             Ok(()) => Ok(()),
@@ -42,6 +63,10 @@ impl LocalStorage {
         }
     }
 
+    /// Creates storage inside the `tuido` subdirectory of `data_directory`.
+    ///
+    /// Creates the `tuido` directory if it does not exist. This is used by [`Self::new`]
+    /// and lets tests run against a temporary directory.
     fn with_data_directory(data_directory: PathBuf) -> Result<Self, StorageError> {
         let app_directory = data_directory.join("tuido");
         let lists_path = app_directory.join("lists.json");
@@ -62,6 +87,9 @@ impl LocalStorage {
         })
     }
 
+    /// Syncs the application directory so that renamed files survive a crash.
+    ///
+    /// Errors are ignored.
     // todo(storage): A failed application directory sync should be logged as a warning (waiting for TUI implementation)
     #[cfg(unix)]
     fn sync_app_directory(path: &Path) {
@@ -72,9 +100,16 @@ impl LocalStorage {
         let _ = directory.sync_all();
     }
 
+    /// Does nothing on platforms where directories cannot be synced.
     #[cfg(not(unix))]
     fn sync_app_directory(_path: &Path) {}
 
+    /// Writes `data` to `temp`, syncs it to disk, and renames it to `target`.
+    ///
+    /// `target` is replaced only after the data has been synced. If any step fails,
+    /// `temp` is removed and `target` keeps its previous content.
+    ///
+    /// Returns [`StorageError::Io`] with the path of the failed step.
     fn replace_atomically(
         &self,
         data: &[u8],
@@ -116,6 +151,10 @@ impl LocalStorage {
         }
     }
 
+    /// Serializes `manager` with the current format version and replaces `lists.json`.
+    ///
+    /// Returns [`StorageError::Serialization`] if the data cannot be serialized, or
+    /// [`StorageError::Io`] if the file cannot be written.
     fn write_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
         let lists_file = ListsFile {
             format_version: Self::FORMAT_VERSION,
@@ -132,6 +171,12 @@ impl LocalStorage {
         Ok(())
     }
 
+    /// Copies the current `lists.json` to `presave_lists.json`.
+    ///
+    /// Nothing is copied if `lists.json` is missing, or if it cannot be parsed or uses an
+    /// unsupported format version. This keeps the last good presave file intact.
+    ///
+    /// Returns [`StorageError::Io`] if the file cannot be read or copied.
     fn copy_lists_to_presave(&self) -> Result<(), StorageError> {
         match Self::read_lists_bytes(&self.lists_path) {
             Ok(None) => Ok(()),
@@ -151,11 +196,24 @@ impl LocalStorage {
         }
     }
 
+    /// Saves `manager` to `lists.json`.
+    ///
+    /// The previous `lists.json` is first copied to `presave_lists.json` when it is valid.
+    ///
+    /// Returns an error if the backup or the write fails. In that case `lists.json` keeps
+    /// its previous content.
     pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
         self.copy_lists_to_presave()?;
         self.write_lists(manager)
     }
 
+    /// Parses lists data and checks its format version.
+    ///
+    /// Data without a `format_version` field is treated as version 1.
+    ///
+    /// Returns [`StorageError::Deserialization`] if the data is not valid JSON or does not
+    /// match the list format, or [`StorageError::UnsupportedFormatVersion`] if the version
+    /// differs from [`Self::FORMAT_VERSION`]. `path` is used only for the error.
     fn parse_lists_bytes(path: &Path, data: &[u8]) -> Result<ListManager, StorageError> {
         let mut document: serde_json::Value = serde_json::from_slice(data)
             .map_err(|source| StorageError::Deserialization { source })?;
@@ -182,6 +240,11 @@ impl LocalStorage {
         Ok(manager)
     }
 
+    /// Reads the raw contents of the file at `path`.
+    ///
+    /// Returns `Ok(None)` if the file does not exist.
+    ///
+    /// Returns [`StorageError::Io`] for any other read error.
     fn read_lists_bytes(path: &Path) -> Result<Option<Vec<u8>>, StorageError> {
         match std::fs::read(path) {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -193,6 +256,10 @@ impl LocalStorage {
         }
     }
 
+    /// Reads and parses the lists file at `path`.
+    ///
+    /// Returns `Ok(None)` if the file does not exist. Parsing errors are the same as
+    /// [`Self::parse_lists_bytes`].
     fn read_lists_file(path: &Path) -> Result<Option<ListManager>, StorageError> {
         match Self::read_lists_bytes(path) {
             Ok(None) => Ok(None),
@@ -204,6 +271,20 @@ impl LocalStorage {
         }
     }
 
+    /// Loads the lists, falling back to backup copies if `lists.json` cannot be used.
+    ///
+    /// Candidates are tried in this order: `lists.json`, `presave_lists.json`, and
+    /// `startup_lists.json`.
+    ///
+    /// - If `lists.json` loads, returns [`LoadOutcome::Loaded`].
+    /// - If a backup loads, it is written back to `lists.json` and
+    ///   [`LoadOutcome::Recovered`] is returned with the path of the backup.
+    /// - If no candidate exists, returns [`LoadOutcome::Missing`].
+    /// - If candidates exist but cannot be parsed, returns the first
+    ///   [`StorageError::Deserialization`] error.
+    ///
+    /// Other errors, such as I/O errors or unsupported format versions, are returned
+    /// immediately without trying the remaining candidates.
     pub fn load_lists(&self) -> Result<LoadOutcome, StorageError> {
         let mut first_error: Option<StorageError> = None;
 
