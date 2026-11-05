@@ -151,38 +151,51 @@ impl LocalStorage {
         self.write_lists(manager)
     }
 
-    fn read_lists_file(path: &Path) -> Result<Option<ListManager>, StorageError> {
-        match std::fs::read_to_string(path) {
-            Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Ok(data) => {
-                let mut document: serde_json::Value = serde_json::from_str(&data)
-                    .map_err(|source| StorageError::Deserialization { source })?;
+    fn parse_lists_bytes(path: &Path, data: &[u8]) -> Result<ListManager, StorageError> {
+        let mut document: serde_json::Value = serde_json::from_slice(data)
+            .map_err(|source| StorageError::Deserialization { source })?;
 
-                let format_version = document
-                    .as_object_mut()
-                    .and_then(|map| map.remove("format_version"));
-                let format_version = match format_version {
-                    None => 1,
-                    Some(value) => serde_json::from_value::<u64>(value)
-                        .map_err(|source| StorageError::Deserialization { source })?,
-                };
+        let format_version = document
+            .as_object_mut()
+            .and_then(|map| map.remove("format_version"));
+        let format_version = match format_version {
+            None => 1,
+            Some(value) => serde_json::from_value::<u64>(value)
+                .map_err(|source| StorageError::Deserialization { source })?,
+        };
 
-                if format_version != u64::from(Self::FORMAT_VERSION) {
-                    return Err(StorageError::UnsupportedFormatVersion {
-                        path: path.to_path_buf(),
-                        version_found: format_version,
-                    });
-                };
+        if format_version != u64::from(Self::FORMAT_VERSION) {
+            return Err(StorageError::UnsupportedFormatVersion {
+                path: path.to_path_buf(),
+                version_found: format_version,
+            });
+        };
 
-                let manager = serde_json::from_value::<ListManager>(document)
-                    .map_err(|source| StorageError::Deserialization { source })?;
+        let manager = serde_json::from_value::<ListManager>(document)
+            .map_err(|source| StorageError::Deserialization { source })?;
 
-                Ok(Some(manager))
-            }
+        Ok(manager)
+    }
+
+    fn read_lists_bytes(path: &Path) -> Result<Option<Vec<u8>>, StorageError> {
+        match std::fs::read(path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Ok(data) => Ok(Some(data)),
             Err(source) => Err(StorageError::Io {
                 path: path.to_path_buf(),
                 source,
             }),
+        }
+    }
+
+    fn read_lists_file(path: &Path) -> Result<Option<ListManager>, StorageError> {
+        match Self::read_lists_bytes(path) {
+            Ok(None) => Ok(None),
+            Ok(Some(data)) => {
+                let manager = Self::parse_lists_bytes(path, &data)?;
+                Ok(Some(manager))
+            }
+            Err(error) => Err(error),
         }
     }
 
