@@ -72,6 +72,47 @@ impl LocalStorage {
     #[cfg(not(unix))]
     fn sync_app_directory(_path: &Path) {}
 
+    fn replace_atomically(
+        &self,
+        data: &[u8],
+        temp: &Path,
+        target: &Path,
+    ) -> Result<(), StorageError> {
+        let result = (|| -> Result<(), StorageError> {
+            {
+                let mut temp_lists = File::create(temp).map_err(|source| StorageError::Io {
+                    path: temp.to_path_buf(),
+                    source,
+                })?;
+                temp_lists
+                    .write_all(data)
+                    .map_err(|source| StorageError::Io {
+                        path: temp.to_path_buf(),
+                        source,
+                    })?;
+                temp_lists.sync_all().map_err(|source| StorageError::Io {
+                    path: temp.to_path_buf(),
+                    source,
+                })?;
+            }
+
+            std::fs::rename(temp, target).map_err(|source| StorageError::Io {
+                path: target.to_path_buf(),
+                source,
+            })?;
+
+            Ok(())
+        })();
+
+        match result {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                let _ = std::fs::remove_file(temp);
+                Err(error)
+            }
+        }
+    }
+
     fn write_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
         let lists_file = ListsFile {
             format_version: Self::FORMAT_VERSION,
@@ -81,42 +122,7 @@ impl LocalStorage {
         let data = serde_json::to_string(&lists_file)
             .map_err(|source| StorageError::Serialization { source })?;
 
-        let result = (|| -> Result<(), StorageError> {
-            {
-                let mut temp_lists =
-                    File::create(&self.temp_lists_path).map_err(|source| StorageError::Io {
-                        path: self.temp_lists_path.clone(),
-                        source,
-                    })?;
-                temp_lists
-                    .write_all(data.as_bytes())
-                    .map_err(|source| StorageError::Io {
-                        path: self.temp_lists_path.clone(),
-                        source,
-                    })?;
-                temp_lists.sync_all().map_err(|source| StorageError::Io {
-                    path: self.temp_lists_path.clone(),
-                    source,
-                })?;
-            }
-
-            std::fs::rename(&self.temp_lists_path, &self.lists_path).map_err(|source| {
-                StorageError::Io {
-                    path: self.lists_path.clone(),
-                    source,
-                }
-            })?;
-
-            Ok(())
-        })();
-
-        match result {
-            Ok(()) => {}
-            Err(error) => {
-                let _ = std::fs::remove_file(&self.temp_lists_path);
-                return Err(error);
-            }
-        };
+        self.replace_atomically(data.as_bytes(), &self.temp_lists_path, &self.lists_path)?;
 
         Self::sync_app_directory(&self.app_directory);
 
