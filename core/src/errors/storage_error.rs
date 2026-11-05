@@ -7,4 +7,5 @@ pub enum StorageError {
     Serialization { source: serde_json::Error },
     Deserialization { source: serde_json::Error },
     DataDirectoryNotFound,
+    UnsupportedFormatVersion { path: PathBuf, version_found: u64 },
 }
