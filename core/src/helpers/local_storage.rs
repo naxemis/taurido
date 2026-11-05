@@ -245,17 +245,6 @@ impl LocalStorage {
     }
 }
 
-// todo(tests): Cover the presave backup in save_lists
-//   - corrupt lists.json leaves the last good presave unchanged
-//   - future format version in lists.json skips the backup
-//   - temp presave blocked by a directory fails with its own path, lists.json and presave unchanged
-//   - successful backup leaves no temp presave behind
-// todo(tests): Cover the remaining storage cases
-//   - identical text across two saves (BTreeMap)
-//   - load without the version field, and with a future version
-//   - file text with keys in id order, compared against an expected literal
-//     (catches HashMap order; a two-save comparison would not)
-
 // todo(tests): Add startup snapshot and lock tests (waiting for TUI implementation)
 #[cfg(test)]
 mod tests {
@@ -435,6 +424,45 @@ mod tests {
     }
 
     #[test]
+    fn load_lists_defaults_missing_format_version_to_one() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_file(
+            &storage.lists_path,
+            r#"{"lists":{"0":{"id":0,"name":"A","column_manager":{"columns":{},"next_id":0}}},"next_id":1}"#,
+        );
+
+        let manager = loaded_manager(storage.load_lists().unwrap());
+
+        assert_eq!(manager.get_by_id(0).unwrap().get_name(), "A");
+    }
+
+    #[test]
+    fn load_lists_returns_unsupported_version_without_fallback() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_file(
+            &storage.lists_path,
+            r#"{"format_version":2,"lists":{},"next_id":0}"#,
+        );
+        write_manager(
+            &storage.presave_lists_path,
+            &manager_with_lists(&["Presaved"]),
+        );
+
+        match storage.load_lists() {
+            Err(StorageError::UnsupportedFormatVersion {
+                path,
+                version_found,
+            }) => {
+                assert_eq!(path, storage.lists_path);
+                assert_eq!(version_found, 2);
+            }
+            other => panic!("Expected UnsupportedFormatVersion error, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn recovery_writes_recovered_data_to_lists_json() {
         let temp = TempDir::new().unwrap();
         let storage = storage(&temp);
@@ -577,5 +605,115 @@ mod tests {
         }
 
         assert_eq!(read_file(&storage.lists_path), lists_before);
+    }
+
+    #[test]
+    fn save_lists_keeps_last_good_presave_when_lists_json_is_corrupt() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_file(&storage.lists_path, "Invalid JSON");
+        write_manager(
+            &storage.presave_lists_path,
+            &manager_with_lists(&["Presaved"]),
+        );
+        let presave_before = read_file(&storage.presave_lists_path);
+
+        storage.save_lists(&manager_with_lists(&["New"])).unwrap();
+
+        assert_eq!(read_file(&storage.presave_lists_path), presave_before);
+        let written = read_manager(&storage.lists_path);
+        assert_eq!(written.get_by_id(0).unwrap().get_name(), "New");
+        assert!(!storage.temp_presave_lists_path.exists());
+    }
+
+    #[test]
+    fn save_lists_skips_presave_backup_for_future_format_version() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_file(
+            &storage.lists_path,
+            r#"{"format_version":2,"lists":{},"next_id":0}"#,
+        );
+        write_manager(
+            &storage.presave_lists_path,
+            &manager_with_lists(&["Presaved"]),
+        );
+        let presave_before = read_file(&storage.presave_lists_path);
+
+        storage.save_lists(&manager_with_lists(&["New"])).unwrap();
+
+        assert_eq!(read_file(&storage.presave_lists_path), presave_before);
+        let written = read_manager(&storage.lists_path);
+        assert_eq!(written.get_by_id(0).unwrap().get_name(), "New");
+        assert!(!storage.temp_presave_lists_path.exists());
+    }
+
+    #[test]
+    fn save_lists_returns_io_error_and_keeps_files_when_temp_presave_is_blocked() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_manager(&storage.lists_path, &manager_with_lists(&["Old"]));
+        write_manager(
+            &storage.presave_lists_path,
+            &manager_with_lists(&["Presaved"]),
+        );
+        let lists_before = read_file(&storage.lists_path);
+        let presave_before = read_file(&storage.presave_lists_path);
+        std::fs::create_dir(&storage.temp_presave_lists_path).unwrap();
+
+        match storage.save_lists(&manager_with_lists(&["New"])) {
+            Err(StorageError::Io { path, .. }) => {
+                assert_eq!(path, storage.temp_presave_lists_path);
+            }
+            other => panic!("Expected Io error, got {other:?}"),
+        }
+
+        assert_eq!(read_file(&storage.lists_path), lists_before);
+        assert_eq!(read_file(&storage.presave_lists_path), presave_before);
+    }
+
+    #[test]
+    fn save_lists_leaves_no_temp_presave_after_successful_backup() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        write_manager(&storage.lists_path, &manager_with_lists(&["Old"]));
+
+        storage.save_lists(&manager_with_lists(&["New"])).unwrap();
+
+        assert!(storage.presave_lists_path.exists());
+        assert!(!storage.temp_presave_lists_path.exists());
+    }
+
+    #[test]
+    fn save_lists_produces_identical_text_across_two_saves() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+        let manager = manager_with_lists(&["A", "B", "C"]);
+
+        storage.save_lists(&manager).unwrap();
+        let first = read_file(&storage.lists_path);
+
+        storage.save_lists(&manager).unwrap();
+        let second = read_file(&storage.lists_path);
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn save_lists_writes_format_version_and_lists_in_id_order() {
+        let temp = TempDir::new().unwrap();
+        let storage = storage(&temp);
+
+        storage
+            .save_lists(&manager_with_lists(&["A", "B"]))
+            .unwrap();
+
+        let expected = concat!(
+            r#"{"format_version":1,"lists":{"#,
+            r#""0":{"id":0,"name":"A","column_manager":{"columns":{},"next_id":0}},"#,
+            r#""1":{"id":1,"name":"B","column_manager":{"columns":{},"next_id":0}}}"#,
+            r#","next_id":2}"#,
+        );
+        assert_eq!(read_file(&storage.lists_path), expected);
     }
 }
