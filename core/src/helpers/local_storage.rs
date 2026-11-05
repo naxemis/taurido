@@ -59,22 +59,18 @@ impl LocalStorage {
         })
     }
 
-    // todo(storage): A failed directory sync fails the whole save even though the data
-    //   is already in place. Decide between failed save and durability warning.
+    // todo(storage): A failed application directory sync should be logged as a warning (waiting for TUI implementation)
     #[cfg(unix)]
-    fn sync_app_directory(path: &Path) -> Result<(), StorageError> {
-        let directory = File::open(path).map_err(|source| StorageError::Io {
-            path: path.to_path_buf(),
-            source,
-        })?;
-        directory.sync_all().map_err(|source| StorageError::Io {
-            path: path.to_path_buf(),
-            source,
-        })
+    fn sync_app_directory(path: &Path) {
+        let Ok(directory) = File::open(path) else {
+            return;
+        };
+
+        let _ = directory.sync_all();
     }
 
     #[cfg(not(unix))]
-    fn sync_app_directory(_path: &Path) -> Result<(), StorageError> {
+    fn sync_app_directory(_path: &Path) {
         Ok(())
     }
 
@@ -114,7 +110,7 @@ impl LocalStorage {
             }
         })?;
 
-        Self::sync_app_directory(&self.app_directory)?;
+        Self::sync_app_directory(&self.app_directory);
 
         Ok(())
     }
