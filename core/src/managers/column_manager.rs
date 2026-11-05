@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::errors::column_error::ColumnError;
 use crate::models::column::Column;
@@ -7,7 +7,7 @@ use crate::models::column::Column;
 /// Stores and manages the columns belonging to a single list.
 #[derive(Serialize, Deserialize)]
 pub(crate) struct ColumnManager {
-    columns: HashMap<u8, Column>,
+    columns: BTreeMap<u8, Column>,
     next_id: u16,
 }
 
@@ -15,7 +15,7 @@ impl ColumnManager {
     /// Creates an empty column manager.
     pub(crate) fn new() -> Self {
         Self {
-            columns: HashMap::new(),
+            columns: BTreeMap::new(),
             next_id: 0,
         }
     }

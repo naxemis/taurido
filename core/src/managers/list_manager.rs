@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::errors::list_error::ListError;
 use crate::models::list::List;
@@ -7,10 +7,7 @@ use crate::models::list::List;
 /// Stores and manages the lists in the application.
 #[derive(Serialize, Deserialize)]
 pub struct ListManager {
-    // todo(storage): HashMap iteration order changes the JSON key order between runs,
-    //   so every session rewrites the file (spurious diffs for git sync). Switch to
-    //   BTreeMap; the JSON shape stays an object.
-    lists: HashMap<u16, List>,
+    lists: BTreeMap<u16, List>,
     next_id: u32,
 }
 
@@ -18,7 +15,7 @@ impl ListManager {
     /// Creates an empty list manager.
     pub fn new() -> Self {
         Self {
-            lists: HashMap::new(),
+            lists: BTreeMap::new(),
             next_id: 0,
         }
     }
