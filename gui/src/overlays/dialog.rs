@@ -1,1 +1,1 @@
-// todo(overlays): Error dialog - display and confirmation
+// todo(overlays): Generic dialog with title, message and buttons, used for errors and confirmations
