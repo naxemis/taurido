@@ -11,7 +11,7 @@ Project is under development. Code from old repository has been rebuilded.
 - [x] Creating, deleting, and renaming cards in lists
 - [x] Moving cards between columns
 - [x] Saving and loading lists from JSON file
-- [ ] TUI using Ratatui
+- [ ] GUI using iced
 ### Full Release:
 - [ ] Importing and exporting lists to and from the user's desktop
 - [ ] Adding, deleting, and renaming card properties (e.g. deadline date, priority, etc.)
@@ -20,7 +20,6 @@ Project is under development. Code from old repository has been rebuilded.
 
 ## Requirements
 - Rust 1.85 or newer
-- Cargo 1.99 or newer
 
 ## Building
 Clone the repository:
@@ -37,7 +36,7 @@ cargo build
 ## Running
 Run the application with:
 ```bash
-cargo run -p tui
+cargo run -p gui
 ```
 
 ## Testing
