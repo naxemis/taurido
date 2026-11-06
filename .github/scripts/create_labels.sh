@@ -44,7 +44,7 @@ gh label create "needs discussion" --repo "$REPO" --color "cc317c" --description
 
 # Area
 gh label create "area: core" --repo "$REPO" --color "6f42c1" --description "Related to core functionality" --force
-gh label create "area: gui" --repo "$REPO" --color "6e6e6e" --description "Related to graphical user interface" --force
+gh label create "area: tui" --repo "$REPO" --color "6e6e6e" --description "Related to text-bases user interface" --force
 gh label create "area: test" --repo "$REPO" --color "28a745" --description "Related to tests and CI" --force
 
 echo "Done. All labels created for $REPO."

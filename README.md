@@ -1,8 +1,8 @@
-# Taurido
-Simple to-do app built with Tauri and Vue. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON.
+# Tuido
+Simple terminal to-do app built with Ratatui. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON and synchronize with git using commands.
 
 ## Project Status
-Project is under development.
+Project is under development. Code from old repository has been rebuilded.
 
 ## Features
 ### Minimal Viable Product:
@@ -11,21 +11,22 @@ Project is under development.
 - [x] Creating, deleting, and renaming cards in lists
 - [x] Moving cards between columns
 - [x] Saving and loading lists from JSON file
-- [ ] GUI using Tauri and Vue.js with TypeScript
+- [ ] TUI using Ratatui
 ### Full Release:
 - [ ] Importing and exporting lists to and from the user's desktop
 - [ ] Adding, deleting, and renaming card properties (e.g. deadline date, priority, etc.)
 - [ ] Sorting cards by their properties
+- [ ] Manual Git synchronization (commit, push, and pull)
 
 ## Requirements
 - Rust 1.85 or newer
-- Node.js 26.13 or newer
+- Cargo 1.99 or newer
 
 ## Building
 Clone the repository:
 ```bash
-git clone https://github.com/naxemis/taurido.git
-cd taurido
+git clone https://github.com/naxemis/tuido.git
+cd tuido
 ```
 
 Build the workspace:
@@ -33,20 +34,10 @@ Build the workspace:
 cargo build
 ```
 
-Build the desktop app:
-```bash
-cd gui
-npm install
-npm run tauri build
-```
-
 ## Running
-The GUI lives in `gui/`. From that directory, install the frontend dependencies once and start the app:
-
+Run the application with:
 ```bash
-cd gui
-npm install
-npm run tauri dev
+cargo run -p tui
 ```
 
 ## Testing

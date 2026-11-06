@@ -56,13 +56,6 @@ impl ListManager {
         self.lists.get(&id)
     }
 
-    /// Finds a list by its ID and returns its mutable version.
-    ///
-    /// Returns `None` if no list has the given ID.
-    pub fn get_mut_by_id(&mut self, id: u16) -> Option<&mut List> {
-        self.lists.get_mut(&id)
-    }
-
     /// Finds all lists whose names exactly match `name`.
     pub fn get_by_name(&self, name: &str) -> Vec<&List> {
         let mut matching_lists = Vec::new();
@@ -140,33 +133,6 @@ mod tests {
         let manager = ListManager::new();
 
         assert!(manager.get_by_id(0).is_none());
-    }
-
-    #[test]
-    fn get_mut_by_id() {
-        let mut manager = ListManager::new();
-
-        let id_a = manager.add("A").unwrap();
-        let id_b = manager.add("B").unwrap();
-
-        let list_a = manager.get_mut_by_id(id_a).unwrap();
-        let column_id = list_a.add_column("A").unwrap();
-
-        let list_a = manager.get_by_id(id_a).unwrap();
-        let result_a = list_a.get_column_by_id(column_id);
-
-        let list_b = manager.get_by_id(id_b).unwrap();
-        let result_b = list_b.get_column_by_id(column_id);
-
-        assert!(result_a.is_some());
-        assert!(result_b.is_none());
-    }
-
-    #[test]
-    fn get_mut_by_id_missing() {
-        let mut manager = ListManager::new();
-
-        assert!(manager.get_mut_by_id(0).is_none());
     }
 
     #[test]

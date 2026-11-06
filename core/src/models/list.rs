@@ -70,7 +70,7 @@ impl List {
     }
 
     pub(crate) fn get_column_by_id_mut(&mut self, id: u8) -> Option<&mut Column> {
-        self.column_manager.get_mut_by_id(id)
+        self.column_manager.get_by_id_mut(id)
     }
 
     /// Finds all columns whose names exactly match `name`.

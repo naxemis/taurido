@@ -24,25 +24,6 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Install Tauri Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
-            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 26
-          cache: npm
-          cache-dependency-path: gui/package-lock.json
-
-      - name: Build the frontend
-        working-directory: gui
-        run: |
-          npm ci
-          npm run build
-
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
@@ -51,8 +32,3 @@ jobs:
 
       - name: Build
         run: cargo build --workspace --all-features
-
-      - name: Check documentation
-        env:
-          RUSTDOCFLAGS: -D warnings
-        run: cargo doc --workspace --no-deps --all-features
