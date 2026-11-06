@@ -18,9 +18,8 @@ Project is under development.
 - [ ] Sorting cards by their properties
 
 ## Requirements
-- Rust 1.85
-- Cargo 1.99
-- Node.js 26.13
+- Rust 1.85 or newer
+- Node.js 26.13 or newer
 
 ## Building
 Clone the repository:
