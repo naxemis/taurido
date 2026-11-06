@@ -1,8 +1,27 @@
-# IDEA
+# Editors
 .idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # macOS
 .DS_Store
 
 # Rust
 target/
+
+# Frontend
+node_modules/
+dist/
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*

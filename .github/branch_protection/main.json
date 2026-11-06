@@ -3,7 +3,7 @@
   "name": "main branch",
   "target": "branch",
   "source_type": "Repository",
-  "source": "naxemis/tuido",
+  "source": "naxemis/taurido",
   "enforcement": "active",
   "conditions": {
     "ref_name": {
