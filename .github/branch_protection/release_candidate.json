@@ -3,7 +3,7 @@
   "name": "release candidate",
   "target": "branch",
   "source_type": "Repository",
-  "source": "naxemis/tuido",
+  "source": "naxemis/todify",
   "enforcement": "active",
   "conditions": {
     "ref_name": {

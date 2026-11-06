@@ -19,7 +19,7 @@ struct ListsFile<'manager> {
 
 /// Stores the lists file in the application's data directory.
 ///
-/// Files are stored in a `tuido` subdirectory of the platform data directory.
+/// Files are stored in a `todify` subdirectory of the platform data directory.
 /// Each write goes to a temporary file first and then replaces the target, so an
 /// interrupted write does not leave a partially written file behind.
 ///
@@ -41,7 +41,7 @@ impl LocalStorage {
 
     /// Creates storage in the platform data directory.
     ///
-    /// Creates the `tuido` directory if it does not exist.
+    /// Creates the `todify` directory if it does not exist.
     ///
     /// Returns [`StorageError::DataDirectoryNotFound`] if the data directory cannot be
     /// determined, or [`StorageError::Io`] if the application directory cannot be created.
@@ -63,12 +63,12 @@ impl LocalStorage {
         }
     }
 
-    /// Creates storage inside the `tuido` subdirectory of `data_directory`.
+    /// Creates storage inside the `todify` subdirectory of `data_directory`.
     ///
-    /// Creates the `tuido` directory if it does not exist. This is used by [`Self::new`]
+    /// Creates the `todify` directory if it does not exist. This is used by [`Self::new`]
     /// and lets tests run against a temporary directory.
     fn with_data_directory(data_directory: PathBuf) -> Result<Self, StorageError> {
-        let app_directory = data_directory.join("tuido");
+        let app_directory = data_directory.join("todify");
         let lists_path = app_directory.join("lists.json");
         let temp_lists_path = app_directory.join("temp_lists.json");
         let presave_lists_path = app_directory.join("presave_lists.json");

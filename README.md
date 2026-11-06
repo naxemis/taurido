@@ -1,5 +1,5 @@
-# Tuido
-Simple terminal to-do app built with Ratatui. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON and synchronize with git using commands.
+# todify
+Simple to-do app built with iced. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON.
 
 ## Project Status
 Project is under development. Code from old repository has been rebuilded.
@@ -25,8 +25,8 @@ Project is under development. Code from old repository has been rebuilded.
 ## Building
 Clone the repository:
 ```bash
-git clone https://github.com/naxemis/tuido.git
-cd tuido
+git clone https://github.com/naxemis/todify.git
+cd todify
 ```
 
 Build the workspace:
