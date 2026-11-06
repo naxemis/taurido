@@ -1,6 +1,8 @@
 use std::io;
 use std::path::PathBuf;
 
+// todo(storage): Add a variant for a lock held by another instance, so the GUI can tell it apart from I/O errors
+
 /// Errors that can occur while reading or writing local storage.
 #[derive(Debug)]
 pub enum StorageError {
