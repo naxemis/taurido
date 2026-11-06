@@ -35,6 +35,7 @@ pub struct LocalStorage {
     startup_lists_path: PathBuf,
 }
 
+// todo(storage): Hold an exclusive lock on todify.lock for the lifetime of LocalStorage (waiting for GUI implementation)
 impl LocalStorage {
     /// Format version written to `lists.json`. Only this version can be loaded.
     pub const FORMAT_VERSION: u16 = 1;
@@ -90,7 +91,7 @@ impl LocalStorage {
     /// Syncs the application directory so that renamed files survive a crash.
     ///
     /// Errors are ignored.
-    // todo(storage): A failed application directory sync should be logged as a warning (waiting for TUI implementation)
+    // todo(storage): A failed application directory sync should be logged as a warning (waiting for GUI implementation)
     #[cfg(unix)]
     fn sync_app_directory(path: &Path) {
         let Ok(directory) = File::open(path) else {
@@ -288,7 +289,7 @@ impl LocalStorage {
     pub fn load_lists(&self) -> Result<LoadOutcome, StorageError> {
         let mut first_error: Option<StorageError> = None;
 
-        // todo(storage): nothing writes startup_lists.json yet (waiting for TUI implementation)
+        // todo(storage): nothing writes startup_lists.json yet (waiting for GUI implementation)
         let candidates = [
             &self.lists_path,
             &self.presave_lists_path,
@@ -326,7 +327,7 @@ impl LocalStorage {
     }
 }
 
-// todo(tests): Add startup snapshot and lock tests (waiting for TUI implementation)
+// todo(tests): Add startup snapshot and lock tests (waiting for GUI implementation)
 #[cfg(test)]
 mod tests {
     use super::*;
