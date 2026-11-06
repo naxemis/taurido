@@ -36,6 +36,8 @@ pub struct LocalStorage {
 }
 
 // todo(storage): Hold an exclusive lock on todify.lock for the lifetime of LocalStorage (waiting for GUI implementation)
+//  - The lock is taken on todify.lock, not lists.json. Every save replaces lists.json
+//    with rename, so a lock held on the old file would stop protecting the new one.
 impl LocalStorage {
     /// Format version written to `lists.json`. Only this version can be loaded.
     pub const FORMAT_VERSION: u16 = 1;
