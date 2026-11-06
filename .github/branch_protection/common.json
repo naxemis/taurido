@@ -3,7 +3,7 @@
   "name": "common branches",
   "target": "branch",
   "source_type": "Repository",
-  "source": "naxemis/taurido",
+  "source": "naxemis/todify",
   "enforcement": "active",
   "conditions": {
     "ref_name": {

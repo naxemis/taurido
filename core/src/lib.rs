@@ -1,4 +1,4 @@
-//! Core domain logic for the taurido application.
+//! Core domain logic for the todify application.
 //!
 //! This crate contains models, managers and errors used by the application.
 
