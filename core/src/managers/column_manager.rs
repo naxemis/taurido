@@ -73,7 +73,7 @@ impl ColumnManager {
         self.columns.get(&id)
     }
 
-    pub(crate) fn get_by_id_mut(&mut self, id: u8) -> Option<&mut Column> {
+    pub(crate) fn get_mut_by_id(&mut self, id: u8) -> Option<&mut Column> {
         self.columns.get_mut(&id)
     }
 

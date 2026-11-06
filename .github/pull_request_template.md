@@ -20,9 +20,7 @@ This helps reviewers see the testing section was intentionally skipped.
 
 Feel free to add or change the steps.
 -->
-
-1. Run `cargo test`.
-2. Run `cargo doc --no-deps`.
+- Run `check.sh` script.
 
 ## Pre-merge checklist
 <!--
