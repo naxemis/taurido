@@ -206,6 +206,7 @@ impl LocalStorage {
     /// Returns an error if the backup or the write fails. In that case `lists.json` keeps
     /// its previous content.
     pub fn save_lists(&self, manager: &ListManager) -> Result<(), StorageError> {
+        // todo(storage): Before the first save after a corrupt lists.json, keep the corrupt file as a timestamped copy so the user can recover it manually
         self.copy_lists_to_presave()?;
         self.write_lists(manager)
     }
