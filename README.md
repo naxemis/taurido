@@ -1,5 +1,5 @@
 # todify
-Simple to-do app built with iced. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON.
+Simple to-do app built with Rust and Iced. Organize tasks into lists with custom columns, sort them by card properties, save locally as JSON.
 
 ## Project Status
 Project is under development. Code from old repository has been rebuilded.
@@ -11,12 +11,11 @@ Project is under development. Code from old repository has been rebuilded.
 - [x] Creating, deleting, and renaming cards in lists
 - [x] Moving cards between columns
 - [x] Saving and loading lists from JSON file
-- [ ] GUI using iced
+- [ ] GUI using Iced
 ### Full Release:
 - [ ] Importing and exporting lists to and from the user's desktop
 - [ ] Adding, deleting, and renaming card properties (e.g. deadline date, priority, etc.)
 - [ ] Sorting cards by their properties
-- [ ] Manual Git synchronization (commit, push, and pull)
 
 ## Requirements
 - Rust 1.85 or newer
