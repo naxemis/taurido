@@ -6,3 +6,9 @@
 // todo(gui): Mark App dirty on data change; save on Ctrl+S, 5 seconds after the last change, and on window close
 //  - Saving on Ctrl+S, 5 seconds after the last change, and on window close keeps
 //    writes and presave backups low while limiting data loss on a crash.
+
+// todo(gui): Working mode in App (normal or read-only); every save path checks it before writing
+
+// todo(gui): Handle the load error choice: switch mode, or call load_lists again on retry
+
+// todo(gui): After a load error, ask the user to choose: read-only mode, work anyway, or retry loading. Read-only blocks all mutations and every save path

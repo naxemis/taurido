@@ -1,0 +1,1 @@
+// todo(overlays): Confirmation dialog with a message and confirm/cancel buttons; used before deleting a list
